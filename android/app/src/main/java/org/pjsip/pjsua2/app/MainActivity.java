@@ -21,6 +21,7 @@ package org.pjsip.pjsua2.app;
 import android.content.IntentFilter;
 import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.app.Activity;
@@ -51,8 +52,7 @@ import org.pjsip.PjCameraInfo2;
 import org.pjsip.pjsua2.*;
 
 public class MainActivity extends Activity
-                          implements Handler.Callback, MyAppObserver
-{
+        implements Handler.Callback, MyAppObserver {
     public static MyApp app = null;
     public static MyCall currentCall = null;
     public static MyAccount account = null;
@@ -67,8 +67,8 @@ public class MainActivity extends Activity
     private String lastRegStatus = "";
 
     private final Handler handler = new Handler(this);
-    public class MSG_TYPE
-    {
+
+    public class MSG_TYPE {
         public final static int INCOMING_CALL = 1;
         public final static int CALL_STATE = 2;
         public final static int REG_STATE = 3;
@@ -89,60 +89,57 @@ public class MainActivity extends Activity
         private boolean isNetworkChange(Context context) {
             boolean network_changed = false;
             ConnectivityManager connectivity_mgr =
-                ((ConnectivityManager)context.getSystemService(
-                                                 Context.CONNECTIVITY_SERVICE));
+                    ((ConnectivityManager) context.getSystemService(
+                            Context.CONNECTIVITY_SERVICE));
 
             NetworkInfo net_info = connectivity_mgr.getActiveNetworkInfo();
-            if(net_info != null && net_info.isConnectedOrConnecting() &&
-               !conn_name.equalsIgnoreCase(""))
-            {
+            if (net_info != null && net_info.isConnectedOrConnecting() &&
+                    !conn_name.equalsIgnoreCase("")) {
                 String new_con = net_info.getExtraInfo();
                 if (new_con != null && !new_con.equalsIgnoreCase(conn_name))
                     network_changed = true;
 
-                conn_name = (new_con == null)?"":new_con;
+                conn_name = (new_con == null) ? "" : new_con;
             } else {
-                if (conn_name.equalsIgnoreCase(""))
+                // 2023-06-13 fix bug when net_info is null
+                if (conn_name.equalsIgnoreCase("") && net_info != null)
                     conn_name = net_info.getExtraInfo();
             }
             return network_changed;
         }
     }
 
-    private HashMap<String, String> putData(String uri, String status)
-    {
+    private HashMap<String, String> putData(String uri, String status) {
         HashMap<String, String> item = new HashMap<String, String>();
         item.put("uri", uri);
         item.put("status", status);
         return item;
     }
 
-    private void showCallActivity()
-    {
+    private void showCallActivity() {
         Intent intent = new Intent(this, CallActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        CameraManager cm = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+        CameraManager cm = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         PjCameraInfo2.SetCameraManager(cm);
 
         if (app == null) {
             app = new MyApp();
             // Wait for GDB to init, for native debugging only
             if (false &&
-                (getApplicationInfo().flags & 
-                ApplicationInfo.FLAG_DEBUGGABLE) != 0)
-            {
+                    (getApplicationInfo().flags &
+                            ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                 try {
                     Thread.sleep(5000);
-                } catch (InterruptedException e) {}
+                } catch (InterruptedException e) {
+                }
             }
 
             app.init(this, getFilesDir().getAbsolutePath());
@@ -163,42 +160,40 @@ public class MainActivity extends Activity
         buddyList = new ArrayList<Map<String, String>>();
         for (int i = 0; i < account.buddyList.size(); i++) {
             buddyList.add(putData(account.buddyList.get(i).cfg.getUri(),
-                                  account.buddyList.get(i).getStatusText()));
+                    account.buddyList.get(i).getStatusText()));
         }
 
-        String[] from = { "uri", "status" };
-        int[] to = { android.R.id.text1, android.R.id.text2 };
+        String[] from = {"uri", "status"};
+        int[] to = {android.R.id.text1, android.R.id.text2};
         buddyListAdapter = new SimpleAdapter(
-                                        this, buddyList,
-                                        android.R.layout.simple_list_item_2,
-                                        from, to);
+                this, buddyList,
+                android.R.layout.simple_list_item_2,
+                from, to);
 
-        buddyListView = (ListView) findViewById(R.id.listViewBuddy);;
+        buddyListView = (ListView) findViewById(R.id.listViewBuddy);
+
         buddyListView.setAdapter(buddyListAdapter);
         buddyListView.setOnItemClickListener(
-            new AdapterView.OnItemClickListener()
-            {
-                @Override
-                public void onItemClick(AdapterView<?> parent,
-                                        final View view,
-                                        int position, long id) 
-                {
-                    view.setSelected(true);
-                    buddyListSelectedIdx = position;
+                new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent,
+                                            final View view,
+                                            int position, long id) {
+                        view.setSelected(true);
+                        buddyListSelectedIdx = position;
+                    }
                 }
-            }
         );
         if (receiver == null) {
             receiver = new MyBroadcastReceiver();
             intentFilter = new IntentFilter(
-                                       ConnectivityManager.CONNECTIVITY_ACTION);
+                    ConnectivityManager.CONNECTIVITY_ACTION);
             registerReceiver(receiver, intentFilter);
         }
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
+    public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar
         // if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
@@ -206,8 +201,7 @@ public class MainActivity extends Activity
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item)
-    {
+    public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_acc_config:
                 dlgAccountSetting();
@@ -223,11 +217,10 @@ public class MainActivity extends Activity
         }
 
         return true;
-    }   
+    }
 
     @Override
-    public boolean handleMessage(Message m)
-    {
+    public boolean handleMessage(Message m) {
         if (m.what == 0) {
 
             app.deinit();
@@ -250,8 +243,7 @@ public class MainActivity extends Activity
                 m2.sendToTarget();
             }
 
-            if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
-            {
+            if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                 currentCall.delete();
                 currentCall = null;
             }
@@ -261,8 +253,8 @@ public class MainActivity extends Activity
             /* Forward the message to CallActivity */
             if (CallActivity.handler_ != null) {
                 Message m2 = Message.obtain(CallActivity.handler_,
-                    MSG_TYPE.CALL_MEDIA_STATE,
-                    null);
+                        MSG_TYPE.CALL_MEDIA_STATE,
+                        null);
                 m2.sendToTarget();
             }
 
@@ -272,10 +264,9 @@ public class MainActivity extends Activity
             int idx = account.buddyList.indexOf(buddy);
 
             /* Update buddy status text, if buddy is valid and
-            * the buddy lists in account and UI are sync-ed.
-            */
-            if (idx >= 0 && account.buddyList.size() == buddyList.size())
-            {
+             * the buddy lists in account and UI are sync-ed.
+             */
+            if (idx >= 0 && account.buddyList.size() == buddyList.size()) {
                 buddyList.get(idx).put("status", buddy.getStatusText());
                 buddyListAdapter.notifyDataSetChanged();
                 // TODO: selection color/mark is gone after this,
@@ -318,7 +309,8 @@ public class MainActivity extends Activity
             prm.setStatusCode(pjsip_status_code.PJSIP_SC_RINGING);
             try {
                 call.answer(prm);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
 
             currentCall = call;
             showCallActivity();
@@ -336,13 +328,12 @@ public class MainActivity extends Activity
     }
 
 
-    private void dlgAccountSetting()
-    {
+    private void dlgAccountSetting() {
         LayoutInflater li = LayoutInflater.from(this);
         View view = li.inflate(R.layout.dlg_account_config, null);
 
-        if (lastRegStatus.length()!=0) {
-            TextView tvInfo = (TextView)view.findViewById(R.id.textViewInfo);
+        if (lastRegStatus.length() != 0) {
+            TextView tvInfo = (TextView) view.findViewById(R.id.textViewInfo);
             tvInfo.setText("Last status: " + lastRegStatus);
         }
 
@@ -350,14 +341,14 @@ public class MainActivity extends Activity
         adb.setView(view);
         adb.setTitle("Account Settings");
 
-        final EditText etId    = (EditText)view.findViewById(R.id.editTextId);
-        final EditText etReg   = (EditText)view.findViewById(R.id.editTextRegistrar);
-        final EditText etProxy = (EditText)view.findViewById(R.id.editTextProxy);
-        final EditText etUser  = (EditText)view.findViewById(R.id.editTextUsername);
-        final EditText etPass  = (EditText)view.findViewById(R.id.editTextPassword);
+        final EditText etId = (EditText) view.findViewById(R.id.editTextId);
+        final EditText etReg = (EditText) view.findViewById(R.id.editTextRegistrar);
+        final EditText etProxy = (EditText) view.findViewById(R.id.editTextProxy);
+        final EditText etUser = (EditText) view.findViewById(R.id.editTextUsername);
+        final EditText etPass = (EditText) view.findViewById(R.id.editTextPassword);
 
-        etId.   setText(accCfg.getIdUri());
-        etReg.  setText(accCfg.getRegConfig().getRegistrarUri());
+        etId.setText(accCfg.getIdUri());
+        etReg.setText(accCfg.getRegConfig().getRegistrarUri());
         StringVector proxies = accCfg.getSipConfig().getProxies();
         if (proxies.size() > 0)
             etProxy.setText(proxies.get(0));
@@ -365,68 +356,63 @@ public class MainActivity extends Activity
             etProxy.setText("");
         AuthCredInfoVector creds = accCfg.getSipConfig().getAuthCreds();
         if (creds.size() > 0) {
-            etUser. setText(creds.get(0).getUsername());
-            etPass. setText(creds.get(0).getData());
+            etUser.setText(creds.get(0).getUsername());
+            etPass.setText(creds.get(0).getData());
         } else {
-            etUser. setText("");
-            etPass. setText("");
+            etUser.setText("");
+            etPass.setText("");
         }
 
         adb.setCancelable(false);
         adb.setPositiveButton("OK",
-            new DialogInterface.OnClickListener()
-            {
-                public void onClick(DialogInterface dialog,int id)
-                {
-                    String acc_id        = etId.getText().toString();
-                    String registrar = etReg.getText().toString();
-                    String proxy         = etProxy.getText().toString();
-                    String username  = etUser.getText().toString();
-                    String password  = etPass.getText().toString();
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        String acc_id = etId.getText().toString();
+                        String registrar = etReg.getText().toString();
+                        String proxy = etProxy.getText().toString();
+                        String username = etUser.getText().toString();
+                        String password = etPass.getText().toString();
 
-                    accCfg.setIdUri(acc_id);
-                    accCfg.getRegConfig().setRegistrarUri(registrar);
-                    AuthCredInfoVector creds = accCfg.getSipConfig().
-                                                            getAuthCreds();
-                    creds.clear();
-                    if (username.length() != 0) {
-                        creds.add(new AuthCredInfo("Digest", "*", username, 0,
-                                                   password));
+                        accCfg.setIdUri(acc_id);
+                        accCfg.getRegConfig().setRegistrarUri(registrar);
+                        AuthCredInfoVector creds = accCfg.getSipConfig().
+                                getAuthCreds();
+                        creds.clear();
+                        if (username.length() != 0) {
+                            creds.add(new AuthCredInfo("Digest", "*", username, 0,
+                                    password));
+                        }
+                        StringVector proxies = accCfg.getSipConfig().getProxies();
+                        proxies.clear();
+                        if (proxy.length() != 0) {
+                            proxies.add(proxy);
+                        }
+
+                        /* Enable ICE */
+                        accCfg.getNatConfig().setIceEnabled(true);
+
+                        /* Finally */
+                        lastRegStatus = "";
+                        try {
+                            account.modify(accCfg);
+                        } catch (Exception e) {
+                        }
                     }
-                    StringVector proxies = accCfg.getSipConfig().getProxies();
-                    proxies.clear();
-                    if (proxy.length() != 0) {
-                        proxies.add(proxy);
-                    }
-
-                    /* Enable ICE */
-                    accCfg.getNatConfig().setIceEnabled(true);
-
-                    /* Finally */
-                    lastRegStatus = "";
-                    try {
-                        account.modify(accCfg);
-                    } catch (Exception e) {}
                 }
-            }
         );
         adb.setNegativeButton("Cancel",
-            new DialogInterface.OnClickListener()
-            {
-                public void onClick(DialogInterface dialog,int id)
-                {
-                    dialog.cancel();
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
                 }
-            }
         );
 
         AlertDialog ad = adb.create();
         ad.show();
     }
 
-
-    public void makeCall(View view)
-    {
+    public void makeCall(View view) {
         if (buddyListSelectedIdx == -1)
             return;
 
@@ -436,7 +422,7 @@ public class MainActivity extends Activity
         }
 
         HashMap<String, String> item = (HashMap<String, String>) buddyListView.
-                                       getItemAtPosition(buddyListSelectedIdx);
+                getItemAtPosition(buddyListSelectedIdx);
         String buddy_uri = item.get("uri");
 
         MyCall call = new MyCall(account, -1);
@@ -453,8 +439,7 @@ public class MainActivity extends Activity
         showCallActivity();
     }
 
-    private void dlgAddEditBuddy(BuddyConfig initial)
-    {
+    private void dlgAddEditBuddy(BuddyConfig initial) {
         final BuddyConfig cfg = new BuddyConfig();
         final BuddyConfig old_cfg = initial;
         final boolean is_add = initial == null;
@@ -465,72 +450,67 @@ public class MainActivity extends Activity
         AlertDialog.Builder adb = new AlertDialog.Builder(this);
         adb.setView(view);
 
-        final EditText etUri  = (EditText)view.findViewById(R.id.editTextUri);
-        final CheckBox cbSubs = (CheckBox)view.findViewById(R.id.checkBoxSubscribe);
+        final EditText etUri = (EditText) view.findViewById(R.id.editTextUri);
+        final CheckBox cbSubs = (CheckBox) view.findViewById(R.id.checkBoxSubscribe);
 
         if (is_add) {
             adb.setTitle("Add Buddy");
         } else {
             adb.setTitle("Edit Buddy");
-            etUri. setText(initial.getUri());
+            etUri.setText(initial.getUri());
             cbSubs.setChecked(initial.getSubscribe());
         }
 
         adb.setCancelable(false);
         adb.setPositiveButton("OK",
-            new DialogInterface.OnClickListener()
-            {
-                public void onClick(DialogInterface dialog,int id)
-                {
-                    cfg.setUri(etUri.getText().toString());
-                    cfg.setSubscribe(cbSubs.isChecked());
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        cfg.setUri(etUri.getText().toString());
+                        cfg.setSubscribe(cbSubs.isChecked());
 
-                    if (is_add) {
-                        account.addBuddy(cfg);
-                        buddyList.add(putData(cfg.getUri(), ""));
-                        buddyListAdapter.notifyDataSetChanged();
-                        buddyListSelectedIdx = -1;
-                    } else {
-                        if (!old_cfg.getUri().equals(cfg.getUri())) {
-                            account.delBuddy(buddyListSelectedIdx);
+                        if (is_add) {
                             account.addBuddy(cfg);
-                            buddyList.remove(buddyListSelectedIdx);
                             buddyList.add(putData(cfg.getUri(), ""));
                             buddyListAdapter.notifyDataSetChanged();
                             buddyListSelectedIdx = -1;
-                        } else if (old_cfg.getSubscribe() != 
-                                   cfg.getSubscribe())
-                        {
-                            MyBuddy bud = account.buddyList.get(
-                                                        buddyListSelectedIdx);
-                            try {
-                                bud.subscribePresence(cfg.getSubscribe());
-                            } catch (Exception e) {}
+                        } else {
+                            if (!old_cfg.getUri().equals(cfg.getUri())) {
+                                account.delBuddy(buddyListSelectedIdx);
+                                account.addBuddy(cfg);
+                                buddyList.remove(buddyListSelectedIdx);
+                                buddyList.add(putData(cfg.getUri(), ""));
+                                buddyListAdapter.notifyDataSetChanged();
+                                buddyListSelectedIdx = -1;
+                            } else if (old_cfg.getSubscribe() !=
+                                    cfg.getSubscribe()) {
+                                MyBuddy bud = account.buddyList.get(
+                                        buddyListSelectedIdx);
+                                try {
+                                    bud.subscribePresence(cfg.getSubscribe());
+                                } catch (Exception e) {
+                                }
+                            }
                         }
                     }
                 }
-            }
         );
         adb.setNegativeButton("Cancel",
-            new DialogInterface.OnClickListener()
-            {
-                public void onClick(DialogInterface dialog,int id) {
-                    dialog.cancel();
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
                 }
-            }
         );
 
         AlertDialog ad = adb.create();
         ad.show();
     }
 
-    public void addBuddy(View view)
-    {
+    public void addBuddy(View view) {
         dlgAddEditBuddy(null);
     }
 
-    public void editBuddy(View view)
-    {
+    public void editBuddy(View view) {
         if (buddyListSelectedIdx == -1)
             return;
 
@@ -543,27 +523,25 @@ public class MainActivity extends Activity
             return;
 
         final HashMap<String, String> item = (HashMap<String, String>)
-                        buddyListView.getItemAtPosition(buddyListSelectedIdx);
+                buddyListView.getItemAtPosition(buddyListSelectedIdx);
         String buddy_uri = item.get("uri");
 
         DialogInterface.OnClickListener ocl =
-                                        new DialogInterface.OnClickListener()
-        {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
-            {
-                switch (which) {
-                    case DialogInterface.BUTTON_POSITIVE:
-                        account.delBuddy(buddyListSelectedIdx);
-                        buddyList.remove(item);
-                        buddyListAdapter.notifyDataSetChanged();
-                        buddyListSelectedIdx = -1;
-                        break;
-                    case DialogInterface.BUTTON_NEGATIVE:
-                        break;
-                }
-            }
-        };
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (which) {
+                            case DialogInterface.BUTTON_POSITIVE:
+                                account.delBuddy(buddyListSelectedIdx);
+                                buddyList.remove(item);
+                                buddyListAdapter.notifyDataSetChanged();
+                                buddyListSelectedIdx = -1;
+                                break;
+                            case DialogInterface.BUTTON_NEGATIVE:
+                                break;
+                        }
+                    }
+                };
 
         AlertDialog.Builder adb = new AlertDialog.Builder(this);
         adb.setTitle(buddy_uri);
@@ -575,28 +553,26 @@ public class MainActivity extends Activity
 
 
     /*
-    * === MyAppObserver ===
-    * 
-    * As we cannot do UI from worker thread, the callbacks mostly just send
-    * a message to UI/main thread.
-    */
+     * === MyAppObserver ===
+     *
+     * As we cannot do UI from worker thread, the callbacks mostly just send
+     * a message to UI/main thread.
+     */
 
-    public void notifyIncomingCall(MyCall call)
-    {
+    public void notifyIncomingCall(MyCall call) {
         Message m = Message.obtain(handler, MSG_TYPE.INCOMING_CALL, call);
         m.sendToTarget();
     }
 
     public void notifyRegState(int code, String reason,
-                               long expiration)
-    {
+                               long expiration) {
         String msg_str = "";
         if (expiration == 0)
             msg_str += "Unregistration";
         else
             msg_str += "Registration";
 
-        if (code/100 == 2)
+        if (code / 100 == 2)
             msg_str += " successful";
         else
             msg_str += " failed: " + reason;
@@ -605,16 +581,16 @@ public class MainActivity extends Activity
         m.sendToTarget();
     }
 
-    public void notifyCallState(MyCall call)
-    {
+    public void notifyCallState(MyCall call) {
         if (currentCall == null || call.getId() != currentCall.getId())
             return;
 
         CallInfo ci = null;
         try {
             ci = call.getInfo();
-        } catch (Exception e) {}
-        
+        } catch (Exception e) {
+        }
+
         if (ci == null)
             return;
 
@@ -622,20 +598,17 @@ public class MainActivity extends Activity
         m.sendToTarget();
     }
 
-    public void notifyCallMediaState(MyCall call)
-    {
+    public void notifyCallMediaState(MyCall call) {
         Message m = Message.obtain(handler, MSG_TYPE.CALL_MEDIA_STATE, null);
         m.sendToTarget();
     }
 
-    public void notifyBuddyState(MyBuddy buddy)
-    {
+    public void notifyBuddyState(MyBuddy buddy) {
         Message m = Message.obtain(handler, MSG_TYPE.BUDDY_STATE, buddy);
         m.sendToTarget();
     }
 
-    public void notifyChangeNetwork()
-    {
+    public void notifyChangeNetwork() {
         Message m = Message.obtain(handler, MSG_TYPE.CHANGE_NETWORK, null);
         m.sendToTarget();
     }
