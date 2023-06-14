@@ -43,6 +43,7 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -222,7 +223,6 @@ public class MainActivity extends Activity
     @Override
     public boolean handleMessage(Message m) {
         if (m.what == 0) {
-
             app.deinit();
             finish();
             Runtime.getRuntime().gc();
@@ -327,7 +327,6 @@ public class MainActivity extends Activity
         return true;
     }
 
-
     private void dlgAccountSetting() {
         LayoutInflater li = LayoutInflater.from(this);
         View view = li.inflate(R.layout.dlg_account_config, null);
@@ -395,6 +394,7 @@ public class MainActivity extends Activity
                         lastRegStatus = "";
                         try {
                             account.modify(accCfg);
+                            app.saveSettings();
                         } catch (Exception e) {
                         }
                     }
@@ -465,6 +465,10 @@ public class MainActivity extends Activity
         adb.setPositiveButton("OK",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
+                        if (!etUri.getText().toString().startsWith("sip:")) {
+                            Toast.makeText(MainActivity.this, "Uri format error", Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         cfg.setUri(etUri.getText().toString());
                         cfg.setSubscribe(cbSubs.isChecked());
 
@@ -491,6 +495,7 @@ public class MainActivity extends Activity
                                 }
                             }
                         }
+                        app.saveSettings();
                     }
                 }
         );
@@ -536,6 +541,7 @@ public class MainActivity extends Activity
                                 buddyList.remove(item);
                                 buddyListAdapter.notifyDataSetChanged();
                                 buddyListSelectedIdx = -1;
+                                app.saveSettings();
                                 break;
                             case DialogInterface.BUTTON_NEGATIVE:
                                 break;
@@ -550,7 +556,6 @@ public class MainActivity extends Activity
         adb.setNegativeButton("No", ocl);
         adb.show();
     }
-
 
     /*
      * === MyAppObserver ===

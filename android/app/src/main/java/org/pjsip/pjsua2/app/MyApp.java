@@ -473,7 +473,6 @@ class MyApp extends pjsua2 {
 
     private void saveConfig(String filename) {
         JsonDocument json = new JsonDocument();
-
         try {
             /* Write endpoint config */
             json.writeObject(epConfig);
@@ -498,6 +497,11 @@ class MyApp extends pjsua2 {
          * after lib has been destroyed and from non-registered thread.
          */
         json.delete();
+    }
+
+    public void saveSettings() {
+        String configPath = appDir + "/" + configName;
+        saveConfig(configPath);
     }
 
     public void handleNetworkChange() {
